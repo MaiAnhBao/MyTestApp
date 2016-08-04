@@ -2,11 +2,13 @@ package com.example.hnnguyen.myapplication;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
+    public static final String TAG = "Test";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -15,6 +17,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        Log.d(TAG,"onTouchEvent");
         float eventX = event.getX();
         float eventY = event.getY();
 
