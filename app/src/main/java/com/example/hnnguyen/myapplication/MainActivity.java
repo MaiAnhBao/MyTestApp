@@ -17,19 +17,13 @@ import java.net.UnknownHostException;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Socket socket;
-    private String serverIPAddr = "192.168.81.102";
-    private static final int SERVERPORT = 8082;
-    public PrintWriter out;
 
     public static final String TAG = "Test";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Client client = new Client();
-//        new Thread(new client.ClientThread()).run();
-        new AsyncAction().execute("");
+
     }
 
     @Override
@@ -68,20 +62,5 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private class AsyncAction extends AsyncTask<String, Void, Void> {
-        @Override
-        protected Void doInBackground(String... params) {
-            try {
-                InetAddress inetAddress = InetAddress.getByName(serverIPAddr);
-                socket = new Socket(inetAddress,SERVERPORT);
 
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            return null;
-        }
-    }
 }
