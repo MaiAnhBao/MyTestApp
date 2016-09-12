@@ -1,26 +1,35 @@
-apply plugin: 'com.android.application'
+apply plugin: 'com.android.model.application'
 
-android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.3"
+model {
+    android {
+        compileSdkVersion 23
+        buildToolsVersion '23.0.3'
 
-    defaultConfig {
-        applicationId "com.example.hnnguyen.myapplication"
-        minSdkVersion 19
-        targetSdkVersion 23
-        versionCode 1
-        versionName "1.0"
-    }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        defaultConfig {
+            applicationId "com.example.hnnguyen.myapplication"
+            minSdkVersion.apiLevel  14
+            targetSdkVersion.apiLevel  23
+            versionCode 1
+            versionName "1.0"
+        }
+        buildTypes {
+            release {
+                minifyEnabled false
+//                proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                proguardFiles.add(file('proguard-android.txt'))
+            }
+        }
+
+        ndk {
+            moduleName "Store"
+            moduleName "client-socket-jni"
+            moduleName "gpslocationprovider"
+
         }
     }
 }
-
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.3.0'
 }
