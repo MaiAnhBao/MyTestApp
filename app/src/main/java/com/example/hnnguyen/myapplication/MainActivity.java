@@ -12,12 +12,22 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.hnnguyen.myapplication.exception.InvalidTypeException;
+import com.example.hnnguyen.myapplication.exception.NotExistingKeyException;
+import com.example.hnnguyen.myapplication.exception.StoreFullException;
+import com.google.common.base.Function;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements StoreListener {
 
     public static final String TAG = "Test";
-    private Store mStore = new Store();
+    private Store mStore = new Store(this);
     private EditText mUIKeyEditText, mUIValueEdit;
     private Spinner mUITypeSpinner;
     private Button mUIGetButton, mUISetButton;
@@ -106,16 +116,34 @@ public class MainActivity extends AppCompatActivity {
             displayMessage("Incorrect key.");
             return;
         }
-        switch (type) {
-            case Integer:
-                mUIValueEdit.setText(Integer.toString(mStore.getInteger(key)));
-                break;
-            case String:
-                mUIValueEdit.setText(mStore.getString(key));
-                break;
-            case Color:
-                mUIValueEdit.setText(mStore.getColor(key).toString());
-                break;
+        try {
+            switch (type) {
+                case Integer:
+                    mUIValueEdit.setText(Integer.toString(mStore.getInteger(key)));
+                    break;
+                case String:
+                    mUIValueEdit.setText(mStore.getString(key));
+                    break;
+                case Color:
+                    mUIValueEdit.setText(mStore.getColor(key).toString());
+                    break;
+                case IntegerArray:
+                    mUIValueEdit.setText(Ints.join(";", mStore
+                            .getIntegerArray(key)));
+                    break;
+                case StringArray:
+                    mUIValueEdit.setText(Joiner.on(";").join(
+                            mStore.getStringArray(key)));
+                    break;
+                case ColorArray:
+                    mUIValueEdit.setText(Joiner.on(";").join(mStore
+                            .getColorArray(key)));
+                    break;
+            }
+        } catch (NotExistingKeyException e) {
+            displayMessage(e.getMessage());
+        } catch (InvalidTypeException e) {
+            displayMessage(e.getMessage());
         }
     }
 
@@ -138,7 +166,30 @@ public class MainActivity extends AppCompatActivity {
                 case Color:
                     mStore.setColor(key,new Color(value));
                     break;
+                case IntegerArray:
+                    mStore.setIntegerArray(key, Ints.toArray(
+                            stringToList(new Function<String, Integer>() {public Integer apply(String pSubValue) {
+                                return Integer.parseInt(pSubValue);
+                            }
+                            }, value)));
+                    break;
+                case StringArray:
+                    String[] stringArray = value.split(";");
+                    mStore.setStringArray(key, stringArray);
+                    break;
+                case ColorArray:
+                    List<Color> idList = stringToList(
+                            new Function<String, Color>() {
+                                public Color apply(String pSubValue) {
+                                    return new Color(pSubValue);
+                                }
+                            }, value);
+                    mStore.setColorArray(key, idList.toArray(
+                            new Color[idList.size()]));
+                    break;
             }
+        } catch (StoreFullException e) {
+            displayMessage(e.getMessage());
         } catch (Exception e) {
             displayMessage("Incorrect value.");
         }
@@ -148,6 +199,29 @@ public class MainActivity extends AppCompatActivity {
     private void displayMessage(String pMessage) {
         Toast.makeText(MainActivity.this, pMessage, Toast.LENGTH_LONG)
                 .show();
+    }
+
+    private <TType> List<TType> stringToList(
+            Function<String, TType> pConversion,
+            String pValue) {
+        String[] splitArray = pValue.split(";");
+        List<String> splitList = Arrays.asList(splitArray);
+        return Lists.transform(splitList, pConversion);
+    }
+
+    @Override
+    public void onSuccess(int pValue) {
+        displayMessage(String.format("Integer '%1$d' successfuly saved!", pValue));
+    }
+
+    @Override
+    public void onSuccess(String pValue) {
+        displayMessage(String.format("String '%1$s' successfuly saved!", pValue));
+    }
+
+    @Override
+    public void onSuccess(Color pValue) {
+        displayMessage(String.format("Color '%1$s' successfuly saved!", pValue));
     }
 
     static {

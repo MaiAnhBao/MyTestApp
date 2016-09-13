@@ -14,18 +14,25 @@ typedef enum {
     StoreType_Integer,
     StoreType_String,
     StoreType_Color,
+    StoreType_IntegerArray,
+    StoreType_StringArray,
+    StoreType_ColorArray
 } StoreType;
 
 typedef union {
     int32_t mInteger;
     char* mString;
     jobject mColor;
+    int32_t* mIntegerArray;
+    char** mStringArray;
+    jobject* mColorArray;
 }StoreValue;
 
 typedef struct {
     char* mKey;
     StoreType mType;
     StoreValue mValue;
+    int32_t mLength;
 } StoreEntry;
 
 typedef struct {
@@ -37,4 +44,8 @@ bool isEntryValid(JNIEnv* pEnv, StoreEntry* pEntry, StoreType pType);
 StoreEntry* allocateEntry(JNIEnv* pEnv, Store* pStore, jstring pKey);
 StoreEntry* findEntry(JNIEnv* pEnv, Store* pStore, jstring pKey);
 void releaseEntryValue(JNIEnv* pEnv, StoreEntry* pEntry);
+
+void throwInvalidTypeException(JNIEnv* pEnv);
+void throwNotExistingKeyException(JNIEnv* pEnv);
+void throwStoreFullException(JNIEnv* pEnv);
 #endif //MYAPPLICATION_STORE_H
