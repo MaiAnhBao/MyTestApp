@@ -54,4 +54,6 @@ public class Store implements StoreListener {
     public native void setStringArray(String pKey,String[] pStringArray);
     public native Color[] getColorArray(String pKey);
     public native void setColorArray(String pKey,Color[] pColorArray);
+    public native long startWatcher();
+    public native void stopWatcher(long pPointer);
 }

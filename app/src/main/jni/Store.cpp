@@ -4,6 +4,7 @@
 #include <jni.h>
 #include "Store.h"
 #include <cstdlib>
+#include <unistd.h>
 
 static Store gStore;
 static jclass StringClass;
@@ -12,6 +13,8 @@ static jclass ColorClass;
 static jmethodID MethodOnSuccessInt;
 static jmethodID MethodOnSuccessString;
 static jmethodID MethodOnSuccessColor;
+
+static jobject gLock;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *env;
@@ -40,6 +43,22 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     env->DeleteLocalRef(StoreClass);
 
     gStore.mLength = 0;
+
+    jclass ObjectClass = env->FindClass("java/lang/Object");
+    if (ObjectClass == NULL) abort();
+    jmethodID ObjectConstructor = env->GetMethodID(ObjectClass,"<init>","()V");
+    if (ObjectConstructor == NULL) abort();
+    jobject lockTmp = env->NewObject(ObjectClass, ObjectConstructor);
+    env->DeleteLocalRef(ObjectClass);
+    gLock = env->NewLocalRef(lockTmp);
+    env->DeleteLocalRef(lockTmp);
+
+    jclass StoreThreadSafeClass = env->FindClass("com/example/hnnguyen/myaaplication/StoreThreadSafe");
+    if (StoreThreadSafeClass == NULL) abort();
+    jfieldID lockField = env->GetStaticFieldID(StoreThreadSafeClass,"LOCK","Ljava/lang/Object;");
+    if (lockField == NULL) abort();
+    env->SetStaticObjectField(StoreThreadSafeClass, lockField, gLock);
+    env->DeleteLocalRef(StoreThreadSafeClass);
     return JNI_VERSION_1_6;
 }
 
@@ -367,4 +386,77 @@ void throwStoreFullException(JNIEnv* pEnv) {
         pEnv->ThrowNew(clazz,"Store is full.");
     }
     pEnv->DeleteLocalRef(clazz);
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_example_hnnguyen_myapplication_Store_startWatcher(JNIEnv *env, jobject instance) {
+    JavaVM* javaVM;
+    if(env->GetJavaVM(&javaVM) != JNI_OK) abort();
+    StoreWatcher* watcher = startWatcher(javaVM,&gStore,gLock);
+    return (jlong) watcher;
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_hnnguyen_myapplication_Store_stopWatcher(JNIEnv *env, jobject instance,
+                                                          jlong pPointer) {
+
+    stopWatcher((StoreWatcher*) pPointer);
+
+}
+
+StoreWatcher* startWatcher(JavaVM* pJavaVM, Store* pStore, jobject pLock) {
+    StoreWatcher* watcher = new StoreWatcher();
+    watcher->mJavaVM = pJavaVM;
+    watcher->mStore = pStore;
+    watcher->mLock = pLock;
+    watcher->mRunning = true;
+
+    pthread_attr_t lAttributes;
+    if (pthread_attr_init(&lAttributes)) abort();
+    if (pthread_create(&watcher->mThread, &lAttributes, runWatcher, watcher)) abort();
+    return watcher;
+}
+
+void stopWatcher(StoreWatcher* pWatcher) {
+    pWatcher->mRunning = false;
+}
+
+void* runWatcher(void* pArgs) {
+    StoreWatcher* storeWatcher = (StoreWatcher*) pArgs;
+    Store* store = storeWatcher->mStore;
+    JavaVM* javaVM = storeWatcher->mJavaVM;
+    JavaVMAttachArgs javaVMAttachArgs;
+    javaVMAttachArgs.version = JNI_VERSION_1_6;
+    javaVMAttachArgs.name = "NativeThread";
+    javaVMAttachArgs.group = NULL;
+
+    JNIEnv* env;
+    if (javaVM->AttachCurrentThreadAsDaemon(&env, &javaVMAttachArgs) != JNI_OK) abort();
+    while (true) {
+        sleep(5);
+        env->MonitorEnter(storeWatcher->mLock);
+        if (!storeWatcher->mRunning) break;
+        StoreEntry* entry = storeWatcher->mStore->mEntries;
+        StoreEntry* entryEnd = entry + storeWatcher->mStore->mLength;
+        while (entry < entryEnd) {
+            processEntry(entry);
+            ++entry;
+        }
+        env->MonitorExit(storeWatcher->mLock);
+    }
+    javaVM->DetachCurrentThread();
+    delete storeWatcher;
+    pthread_exit(NULL);
+}
+
+void processEntry(StoreEntry* pEntry) {
+    switch (pEntry->mType) {
+        case StoreType_Integer:
+            if (pEntry->mValue.mInteger > 100000) {
+                pEntry->mValue.mInteger = 100000;
+            } else if (pEntry->mValue.mInteger < -100000) {
+                pEntry->mValue.mInteger = -100000;
+            }
+            break;
+    }
 }

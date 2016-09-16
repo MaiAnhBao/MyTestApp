@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <jni.h>
+#include <pthread.h>
 
 #define STORE_MAX_CAPACITY 16
 
@@ -40,6 +41,14 @@ typedef struct {
     int32_t mLength;
 } Store;
 
+typedef struct {
+    Store* mStore;
+    JavaVM* mJavaVM;
+    jobject mLock;
+    pthread_t mThread;
+    int32_t mRunning;
+} StoreWatcher;
+
 bool isEntryValid(JNIEnv* pEnv, StoreEntry* pEntry, StoreType pType);
 StoreEntry* allocateEntry(JNIEnv* pEnv, Store* pStore, jstring pKey);
 StoreEntry* findEntry(JNIEnv* pEnv, Store* pStore, jstring pKey);
@@ -48,4 +57,9 @@ void releaseEntryValue(JNIEnv* pEnv, StoreEntry* pEntry);
 void throwInvalidTypeException(JNIEnv* pEnv);
 void throwNotExistingKeyException(JNIEnv* pEnv);
 void throwStoreFullException(JNIEnv* pEnv);
+
+StoreWatcher* startWatcher(JavaVM* pJavaVM, Store* pStore, jobject pLock);
+void stopWatcher(StoreWatcher* pWatcher);
+void* runWatcher(void* pArgs);
+void processEntry(StoreEntry* pEntry);
 #endif //MYAPPLICATION_STORE_H

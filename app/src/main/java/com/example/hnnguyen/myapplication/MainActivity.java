@@ -27,7 +27,9 @@ import java.util.regex.Pattern;
 public class MainActivity extends AppCompatActivity implements StoreListener {
 
     public static final String TAG = "Test";
-    private Store mStore = new Store(this);
+    //private Store mStore = new Store(this);
+    private StoreThreadSafe mStore = new StoreThreadSafe(this);
+    private long mWatcher;
     private EditText mUIKeyEditText, mUIValueEdit;
     private Spinner mUITypeSpinner;
     private Button mUIGetButton, mUISetButton;
@@ -76,12 +78,14 @@ public class MainActivity extends AppCompatActivity implements StoreListener {
     protected void onResume() {
         Toast.makeText(MainActivity.this, "onResume", Toast.LENGTH_SHORT).show();
         super.onResume();
+        mWatcher = mStore.startWatcher();
     }
 
     @Override
     protected void onPause() {
         Toast.makeText(MainActivity.this, "onPause", Toast.LENGTH_SHORT).show();
         super.onPause();
+        mStore.stopWatcher(mWatcher);
     }
 
     @Override
